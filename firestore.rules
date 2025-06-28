@@ -11,8 +11,10 @@ service cloud.firestore {
 
     // Scan histories collection - only allow access to user's own scan histories
     match /scanHistories/{historyId} {
-      allow read, create, update, delete: if request.auth != null && 
-                                           request.auth.uid == resource.data.userId;
+      allow read, update, delete: if request.auth != null && 
+                                       request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+                         request.auth.uid == request.resource.data.userId;
     }
 
     // Example for a "posts" collection owned by users

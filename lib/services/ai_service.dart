@@ -53,7 +53,7 @@ class AiService {
 // Provider for AI service
 final aiServiceProvider = Provider<AiService>((ref) {
   return AiService(
-    apiKey: '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',
+    apiKey: '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',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'deepseek/deepseek-chat-v3-0324:free',
   );

@@ -13,6 +13,7 @@ import '../services/ai_service.dart';
 import 'package:alarm/alarm.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io' show Platform;
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Global navigator key for accessing context
@@ -234,6 +235,19 @@ class _MedisightState extends ConsumerState<Medisight> {
       // Update the analysis result provider
       ref.read(aiAnalysisResultProvider.notifier).state = analysisResult;
       
+      // Get current user from userProvider
+      final user = ref.read(userProvider);
+      
+      // Save scan result to Firestore if user is logged in
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('scanHistories').add({
+          'userId': user.uid,
+          'medicineName': medicineName,
+          'analysisResult': analysisResult,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+      
       // Show the analysis result in a modal dialog
       if (mounted) {
         showModalBottomSheet(
@@ -259,7 +273,7 @@ class _MedisightState extends ConsumerState<Medisight> {
                       Text(
                         'Medicine Analysis: $medicineName',
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -374,6 +388,44 @@ class _MedisightState extends ConsumerState<Medisight> {
       );
       return;
     }
+    
+    // Show camera preview in a modal bottom sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        child: Column(
+          children: [
+            Expanded(
+              child: CameraPreview(cameraController),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  FloatingActionButton(
+                    backgroundColor: Colors.white,
+                    child: const Icon(Icons.camera_alt, color: Colors.black),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      processImage(cameraController);
+                    },
+                  ),
+                  const SizedBox(width: 56), // For balance
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showMedicineDetails(Map<String, dynamic> result) {
@@ -851,6 +903,11 @@ class _MedisightState extends ConsumerState<Medisight> {
                               'Email Preferences',
                               Icons.email_outlined,
                               () => _showEmailPreferencesDialog(context),
+                            ),
+                             _buildAccountOption(
+                              'History',
+                              Icons.history_outlined,
+                              () => _showScanHistoryDialog(context),
                             ),
                           ],
                         ),
@@ -1440,6 +1497,103 @@ void _showEmailPreferencesDialog(BuildContext context) {
           ],
         );
       }
+    ),
+  );
+}
+
+void _showScanHistoryDialog(BuildContext context) {
+  final user = FirebaseAuth.instance.currentUser;
+  
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
+      title: const Text('Scan History', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: user != null
+          ? StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                .collection('scanHistories')
+                .where('userId', isEqualTo: user.uid)
+                .orderBy('timestamp', descending: true)
+                .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                
+                final docs = snapshot.data?.docs ?? [];
+                
+                if (docs.isEmpty) {
+                  return const Center(child: Text('No scan history found'));
+                }
+                
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final medicineName = data['medicineName'] as String? ?? 'Unknown';
+                    final timestamp = data['timestamp'] as Timestamp?;
+                    final date = timestamp != null
+                      ? DateTime.fromMillisecondsSinceEpoch(timestamp.millisecondsSinceEpoch)
+                      : DateTime.now();
+                    final formattedDate = '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
+                    
+                    return ListTile(
+                      title: Text(medicineName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('Scanned on $formattedDate'),
+                      onTap: () => _showHistoryDetails(context, data),
+                    );
+                  },
+                );
+              },
+            )
+          : const Center(child: Text('Please log in to view scan history')),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close', style: TextStyle(color: Colors.blue)),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showHistoryDetails(BuildContext context, Map<String, dynamic> data) {
+  final medicineName = data['medicineName'] as String? ?? 'Unknown';
+  final analysisResult = data['analysisResult'] as String? ?? 'No analysis available';
+  
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
+      title: Text('Details: $medicineName', 
+        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Analysis Result:', 
+              style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(analysisResult),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close', style: TextStyle(color: Colors.blue)),
+        ),
+      ],
     ),
   );
 }
