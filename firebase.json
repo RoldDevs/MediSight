@@ -1,0 +1,31 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "medisight-5a189",
+          "appId": "1:538955764944:android:4e3182495abdaaeeebfad5",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "medisight-5a189",
+          "configurations": {
+            "android": "1:538955764944:android:4e3182495abdaaeeebfad5",
+            "ios": "1:538955764944:ios:b8771410c8bcba84ebfad5",
+            "macos": "1:538955764944:ios:b8771410c8bcba84ebfad5",
+            "web": "1:538955764944:web:2a8c02bcb0cc8c9debfad5",
+            "windows": "1:538955764944:web:4a69b81739223b89ebfad5"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
