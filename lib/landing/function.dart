@@ -46,7 +46,7 @@ class Medisight extends ConsumerStatefulWidget {
 class _MedisightState extends ConsumerState<Medisight> {
   final TextEditingController searchController = TextEditingController();
   final ScrollController scrollController = ScrollController();
-  final TextRecognizer textRecognizer = TextRecognizer();
+  final TextRecognizer textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
   @override
   void initState() {
