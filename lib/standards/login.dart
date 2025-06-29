@@ -109,26 +109,23 @@ class LoginState extends ConsumerState<Login> {
             const SizedBox(height: 40),
             Center(
               child: Container(
-                width: 150,
-                height: 150,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(10),
                 child: Image.asset(
-                  'assets/images/playstore.png',
+                  'assets/images/slogan.jpg',
                   fit: BoxFit.contain,
                 ),
               ),
             ),
-            const SizedBox(height: 20),
             RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
                 children: [
                   TextSpan(
-                    text: 'Welcome Back to\n',
+                    text: 'Welcome Back\n',
                     style: GoogleFonts.poppins(
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
@@ -136,7 +133,7 @@ class LoginState extends ConsumerState<Login> {
                     ),
                   ),
                   TextSpan(
-                    text: 'MediSight',
+                    text: 'Patient!',
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,

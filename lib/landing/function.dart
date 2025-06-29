@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io' show Platform;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_tts/flutter_tts.dart';
 
 // Global navigator key for accessing context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -47,6 +48,8 @@ class _MedisightState extends ConsumerState<Medisight> {
   final TextEditingController searchController = TextEditingController();
   final ScrollController scrollController = ScrollController();
   final TextRecognizer textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  late FlutterTts flutterTts;
+  bool isSpeaking = false;
 
   @override
   void initState() {
@@ -57,6 +60,10 @@ class _MedisightState extends ConsumerState<Medisight> {
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       ref.read(userProvider.notifier).state = user;
     });
+    
+    // Initialize FlutterTts
+    flutterTts = FlutterTts();
+    _initTts();
   }
 
   @override
@@ -64,6 +71,7 @@ class _MedisightState extends ConsumerState<Medisight> {
     searchController.dispose();
     scrollController.dispose();
     textRecognizer.close();
+    flutterTts.stop();
     final cameraController = ref.read(cameraControllerProvider);
     if (cameraController != null) {
       cameraController.dispose();
@@ -226,6 +234,35 @@ class _MedisightState extends ConsumerState<Medisight> {
     }
   }
 
+  // Initialize TTS settings
+  Future<void> _initTts() async {
+    await flutterTts.setLanguage("en-US");
+    await flutterTts.setSpeechRate(0.5);
+    await flutterTts.setVolume(1.0);
+    await flutterTts.setPitch(1.0);
+    
+    flutterTts.setCompletionHandler(() {
+      setState(() {
+        isSpeaking = false;
+      });
+    });
+  }
+  
+  // Method to speak text
+  Future<void> _speak(String text) async {
+    if (isSpeaking) {
+      await flutterTts.stop();
+      setState(() {
+        isSpeaking = false;
+      });
+    } else {
+      setState(() {
+        isSpeaking = true;
+      });
+      await flutterTts.speak(text);
+    }
+  }
+
   Future<void> analyzeWithAI(String medicineName) async {
     try {
       // Use the OpenRouter AI service from aiServiceProvider
@@ -270,16 +307,42 @@ class _MedisightState extends ConsumerState<Medisight> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Medicine Analysis: $medicineName',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Medicine Analysis: $medicineName',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      // Add text-to-speech button
+                      StatefulBuilder(
+                        builder: (context, setState) {
+                          return IconButton(
+                            icon: Icon(
+                              isSpeaking ? Icons.stop_circle : Icons.play_circle,
+                              color: Colors.black,
+                              size: 30,
+                            ),
+                            onPressed: () {
+                              _speak(analysisResult).then((_) {
+                                setState(() {
+                                  // This updates the button state within the modal
+                                  isSpeaking = !isSpeaking;
+                                });
+                              });
+                            },
+                          );
+                        }
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          flutterTts.stop(); // Stop speaking when modal is closed
+                          Navigator.pop(context);
+                        },
                       ),
                     ],
                   ),
